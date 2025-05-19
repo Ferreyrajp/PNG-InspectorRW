@@ -1,0 +1,225 @@
+:root {
+    --primary-color: #4a90e2;
+    --primary-hover: #357abd;
+    --background-dark: #1a1a1a;
+    --background-medium: #2a2a2a;
+    --text-color: #ffffff;
+    --border-color: #4a4a4a;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: var(--background-dark);
+    color: var(--text-color);
+}
+
+h1 {
+    margin-left: 20px; /* Alinear con el margen del contenedor */
+    color: var(--text-color);
+    font-size: 24px;
+}
+
+.container {
+    display: flex;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-top: 20px;
+}
+
+h1 {
+    margin: 0;
+    padding: 20px 0;
+    color: var(--text-color);
+    font-size: 24px;
+    text-align: left;
+}
+
+.column {
+    flex: 1;
+    background-color: var(--background-medium);
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.image-container {
+    width: 100%;
+    min-height: 576px;
+    background-color: var(--background-medium);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color);
+    font-size: 14px;
+    border: 2px dashed var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.image-container.dragover {
+    border-color: var(--text-color);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.image-container img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    background-color: transparent;
+    border: none;
+    margin: 0;
+    padding: 0;
+    opacity: 1;
+}
+
+.image-container img[src=''] {
+    display: none;
+}
+
+.image-container img:not([src]) {
+    display: none;
+}
+
+.image-container:has(img[src='']) {
+    background-color: var(--background-medium);
+}
+
+.close-button {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background-color: var(--background-medium);
+    border: 2px solid var(--text-color);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.image-container:has(img[src^='data:']) .close-button,
+.image-container:has(img[src^='http']) .close-button {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.close-button:hover {
+    background-color: var(--text-color);
+    border-color: var(--background-medium);
+}
+
+.close-button::before {
+    content: "×";
+    color: var(--text-color);
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.close-button:hover::before {
+    color: var(--background-medium);
+}
+
+.upload-message {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color);
+    font-size: 14px;
+    opacity: 1;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none;
+}
+
+.upload-message:hover {
+    color: #FFA500;
+}
+
+.image-container:has(img[src^='data:']) .upload-message,
+.image-container:has(img[src^='http']) .upload-message {
+    opacity: 0;
+}
+
+.image-container:has(img[src='']) .upload-message {
+    opacity: 1;
+}
+
+.upload-container {
+    margin-top: 20px;
+}
+
+.custom-file-upload {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.custom-file-upload:hover {
+    background-color: var(--primary-hover);
+}
+
+input[type="file"] {
+    display: none;
+}
+
+textarea {
+    width: 95%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--background-medium);
+    color: var(--text-color);
+    font-family: monospace;
+    resize: vertical;
+    min-height: 470px;
+    height: 470px;
+    font-size: 15px;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 10px;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.metadata-section {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--text-color);
+    font-size: 23px;
+}

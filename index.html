@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspector de PNG</title>
+    <link rel="stylesheet" href="styles.css">
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PNG Inspector</h1>
+    </div>
+    <div class="container">
+        <div class="column">
+            <div class="image-container">
+                <label class="upload-message" for="imageInput">Arrastra o selecciona una imagen PNG</label>
+                <img id="preview" src="" alt="Preview">
+                <div class="close-button" id="closeButton"></div>
+                <input type="file" id="imageInput" accept="image/png" style="display: none;">
+            </div>
+        </div>
+        <div class="column">
+            <div class="metadata-section">
+                <label for="metadata">Metadatos:</label>
+                <textarea id="metadata"></textarea>
+                <button id="saveButton" class="save-button" style="display: none;">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const preview = document.getElementById('preview');
+        const metadataForm = document.getElementById('metadata');
+        const saveButton = document.getElementById('saveButton');
+        const closeButton = document.getElementById('closeButton');
+
+        // Mostrar el botón de guardar cuando se edita el textarea
+        metadataForm.addEventListener('input', () => {
+            saveButton.style.display = 'block';
+        });
+
+        // Manejar el clic en el botón de guardar
+        saveButton.addEventListener('click', async () => {
+            try {
+                // Obtener los datos necesarios
+                const metadata = metadataForm.value;
+                const imageElement = document.querySelector('img');
+                const imageSrc = imageElement.src;
+
+                // Crear un formulario para enviar los datos
+                const formData = new FormData();
+                formData.append('metadata', metadata);
+
+                // Obtener la imagen como blob
+                const imageBlob = await fetch(imageElement.src)
+                    .then(response => response.blob());
+                
+                // Crear un archivo de la imagen
+                const imageFile = new File([imageBlob], 'temp_image.png', { type: 'image/png' });
+                formData.append('image', imageFile);
+                
+                // Enviar la solicitud para guardar los metadatos
+                const response = await fetch('/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Crear un enlace para descargar la imagen
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'image_with_metadata.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    // Mostrar mensaje de éxito
+                    alert('¡Metadatos guardados exitosamente! La imagen se ha descargado.');
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Error al guardar los metadatos');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al guardar los metadatos: ' + error.message);
+            }
+        });
+
+        // Función para limpiar la imagen y los metadatos
+        function clearImage() {
+            preview.src = '';
+            preview.removeAttribute('src');
+            preview.style.display = 'none';
+            metadataForm.value = '';
+            modifiedMetadataForm.value = '';
+            imageInput.value = '';
+        }
+
+        // Evento para el botón de cierre
+        closeButton.addEventListener('click', clearImage);
+
+        // Manejo de arrastrar y soltar
+        const imageContainer = document.querySelector('.image-container');
+        
+        imageContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            imageContainer.classList.add('dragover');
+        });
+
+        imageContainer.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            imageContainer.classList.remove('dragover');
+        });
+
+        imageContainer.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            imageContainer.classList.remove('dragover');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                imageInput.files = e.dataTransfer.files;
+                imageInput.dispatchEvent(new Event('change'));
+            }
+        });
+
+        imageInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Mostrar la imagen y preparar la carga
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                preview.style.visibility = 'visible';
+                // Limpiar el textarea antes de cargar la nueva imagen
+                metadataForm.value = '';
+            };
+            reader.readAsDataURL(file);
+
+            // Enviar la imagen al servidor
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const metadataText = data.metadata.metadatos_crudos;
+
+                    
+                    // Reemplazar comillas simples por dobles
+                    const jsonString = metadataText.replace(/'/g, '"');
+                    try {
+                        // Parsear el JSON
+                        const jsonData = JSON.parse(jsonString);
+                        
+                        // Extraer y dividir
+                        const parameters = jsonData["parameters"];
+                        const partes = parameters.split("\n\n", 1);
+                        
+                        const titulo = partes[0].trim();
+                        const datos = partes[1]?.trim() || "";
+                        
+                        metadataForm.value += '\n' + titulo + ':\n' + datos;
+                    } catch (e) {
+                        // Si hay algún error, mostrar el texto original
+                        metadataForm.value += '\n' + metadataText;
+                    }
+                } else {
+                    console.error('Error al procesar la imagen');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
