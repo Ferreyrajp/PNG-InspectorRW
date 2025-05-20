@@ -3,74 +3,102 @@
 [![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-PNG Inspector RW es una herramienta de escritorio para visualizar y editar metadatos de imágenes PNG, incluyendo soporte para parámetros de generación de IA (como Stable Diffusion). La aplicación permite ver, modificar y guardar tanto metadatos EXIF estándar como metadatos específicos de PNG.
+PNG Inspector RW es una herramienta web para visualizar y editar metadatos de imágenes PNG, con soporte especial para parámetros de generación de IA (como Stable Diffusion). La aplicación permite ver, modificar y guardar metadatos en imágenes PNG de manera sencilla e intuitiva.
 
 ## Características
 
-- Visualización de metadatos EXIF y específicos de PNG
-- Edición de campos estándar como Autor, Copyright, Descripción, etc.
+- Visualización de metadatos de imágenes PNG
+- Edición de metadatos existentes
 - Soporte para parámetros de generación de IA (Stable Diffusion, etc.)
-- Interfaz gráfica intuitiva
-- Compatible con Windows, macOS y Linux
+- Interfaz web intuitiva y fácil de usar
+- Compatible con cualquier navegador moderno
 - Preserva la calidad original de la imagen al guardar
+- Soporte para arrastrar y soltar imágenes
+- Visualización previa de la imagen cargada
 
 ## Requisitos
 
 - Python 3.7 o superior
 - pip (gestor de paquetes de Python)
 
-## Instalación
+## Instalación Rápida
 
 1. Clona el repositorio:
    ```bash
-   git clone https://github.com/tu-usuario/PNG-InspectorRW.git
+   git clone https://github.com/Ferreyrajp/PNG-InspectorRW.git
    cd PNG-InspectorRW
    ```
 
-2. Crea y activa un entorno virtual (recomendado):
-   ```bash
-   # Windows
-   python -m venv venv
-   .\venv\Scripts\activate
-   
-   # macOS/Linux
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-
-3. Instala las dependencias:
+2. Instala las dependencias:
    ```bash
    pip install -r requirements.txt
    ```
 
+3. Ejecuta la aplicación:
+   ```bash
+   # Windows
+   .\run.bat
+   
+   # Linux/macOS
+   chmod +x run.sh
+   ./run.sh
+   ```
+
+4. Abre tu navegador y ve a:
+   ```
+   http://localhost:8081
+   ```
+
 ## Uso
 
-1. Inicia la aplicación:
-   ```bash
-   python png_inspector_simple.py
-   ```
-   
-   O para la versión web:
-   ```bash
-   python png_metadata.py
+1. **Cargar una imagen**:
+   - Haz clic en el área de carga o arrastra una imagen PNG al recuadro punteado
+   - La imagen se mostrará en el panel izquierdo
+
+2. **Ver metadatos**:
+   - Los metadatos de la imagen se mostrarán automáticamente en el panel derecho
+   - Los metadatos pueden incluir información EXIF, parámetros de IA y otros datos incrustados
+
+3. **Editar metadatos**:
+   - Modifica directamente el texto en el área de metadatos
+   - El botón "Guardar" aparecerá automáticamente cuando hayas realizado cambios
+
+4. **Guardar la imagen**:
+   - Haz clic en el botón "Guardar"
+   - La imagen con los metadatos actualizados se descargará automáticamente
+
+## Formato de Metadatos
+
+La aplicación soporta dos formatos de metadatos:
+
+1. **Texto plano**: Cualquier texto que desees guardar en los metadatos
+2. **JSON**: Para una estructura más organizada, usa formato JSON:
+   ```json
+   {
+     "parameters": "Tus parámetros aquí",
+     "author": "Tu nombre",
+     "description": "Descripción de la imagen"
+   }
    ```
 
-2. En la interfaz gráfica:
-   - Haz clic en "Seleccionar imagen" para cargar un archivo PNG
-   - Visualiza los metadatos en el panel derecho
-   - Modifica los campos que desees
-   - Haz clic en "Guardar" para guardar los cambios
+## Solución de Problemas
+
+### No se guardan los metadatos
+- Asegúrate de que la imagen no esté abierta en otro programa
+- Verifica que tengas permisos de escritura en el directorio de descargas
+- Si usas un formato JSON, verifica que sea válido
 
 ## Estructura del Proyecto
 
 ```
 PNG-InspectorRW/
 ├── index.html          # Interfaz web
-├── png_inspector_simple.py  # Aplicación de escritorio
-├── png_metadata.py     # Lógica de manejo de metadatos
-├── requirements.txt    # Dependencias
-├── styles.css         # Estilos para la interfaz web
-└── uploads/           # Directorio para imágenes cargadas
+├── png_inspector_simple.py  # Servidor web y lógica de metadatos
+├── requirements.txt    # Dependencias de Python
+├── styles.css         # Estilos CSS
+├── run.bat           # Script de inicio para Windows
+├── run.sh            # Script de inicio para Linux/macOS
+└── PNG_Inspector.png  # Logo de la aplicación
 ```
 
 ## Formatos de Metadatos Soportados
@@ -95,10 +123,6 @@ Asegúrate de que:
 - La imagen no esté abierta en otro programa
 - Tienes permisos de escritura en el directorio de destino
 - No estás modificando campos de metadatos críticos
-
-### No se muestran los metadatos
-- Verifica que la imagen tenga metadatos incrustados
-- Algunos formatos de metadatos pueden no ser compatibles
 
 ## Contribuir
 

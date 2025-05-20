@@ -163,6 +163,8 @@
                 preview.src = e.target.result;
                 preview.style.display = 'block';
                 preview.style.visibility = 'visible';
+                // Mostrar el botón de guardar cuando hay una imagen
+                saveButton.style.display = 'block';
                 // Limpiar el textarea antes de cargar la nueva imagen
                 metadataForm.value = '';
             };

@@ -1,9 +1,9 @@
 import http.server
 import socketserver
 import os
+import json
 from PIL import Image
 import cgi
-import json
 
 class MyHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -57,20 +57,25 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                     img_copy = img.copy()
                     
                     # Procesar los metadatos del formulario
-                    if metadata.strip():
+                    if metadata and isinstance(metadata, str) and metadata.strip():
+                        metadata = metadata.strip()
                         try:
                             # Intentar cargar como JSON
-                            if metadata.strip().startswith('{') and metadata.strip().endswith('}'):
-                                import json
+                            if metadata.startswith('{') and metadata.endswith('}'):
                                 try:
                                     metadata_dict = json.loads(metadata)
                                     if isinstance(metadata_dict, dict):
                                         # Actualizar los metadatos
                                         for k, v in metadata_dict.items():
                                             if v is not None:
-                                                img_copy.info[k] = str(v) if not isinstance(v, (str, bytes)) else v
-                                except json.JSONDecodeError:
+                                                # Convertir a string si no es str o bytes
+                                                img_copy.info[str(k)] = str(v) if not isinstance(v, (str, bytes)) else v
+                                    else:
+                                        # Si no es un diccionario, guardar como parámetro
+                                        img_copy.info['parameters'] = metadata
+                                except json.JSONDecodeError as je:
                                     # Si no es un JSON válido, guardar como parámetro
+                                    print(f"Error decodificando JSON: {str(je)}")
                                     img_copy.info['parameters'] = metadata
                             else:
                                 # Si no es un JSON, guardar como parámetro
