@@ -146,7 +146,7 @@ Este proyecto está licenciado bajo la Licencia MIT - ver el archivo [LICENSE](L
 
 ## Contacto
 
-¿Preguntas o sugerencias? ¡Abre un issue o contáctame en [tu-email@ejemplo.com](mailto:tu-email@ejemplo.com)!
+¿Preguntas o sugerencias? ¡Abre un issue o contáctame en [ferreyrapblf@gmail.com](ferreyrapblf@gmail.com)!
 
 ---
 
