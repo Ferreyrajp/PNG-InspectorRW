@@ -16,7 +16,12 @@ PNG Inspector RW es una herramienta web para visualizar y editar metadatos de im
 - Soporte para arrastrar y soltar imágenes
 - Visualización previa de la imagen cargada
 
-## Requisitos
+## Vista Previa
+
+![Vista previa de la aplicación](Screenshot.png)
+*Interfaz de usuario de PNG Inspector RW*
+
+## 📋 Requisitos
 
 - Python 3.7 o superior
 - pip (gestor de paquetes de Python)
