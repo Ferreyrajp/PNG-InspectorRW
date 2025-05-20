@@ -61,7 +61,29 @@
 
                 // Crear un formulario para enviar los datos
                 const formData = new FormData();
-                formData.append('metadata', metadata);
+                
+                // Crear un objeto con los metadatos
+                const metadataObj = {};
+                
+                // Si el texto parece ser un JSON, intentar parsearlo
+                if (metadata.trim().startsWith('{') && metadata.trim().endsWith('}')) {
+                    try {
+                        const parsed = JSON.parse(metadata);
+                        if (typeof parsed === 'object' && parsed !== null) {
+                            Object.assign(metadataObj, parsed);
+                        } else {
+                            metadataObj.parameters = metadata;
+                        }
+                    } catch (e) {
+                        metadataObj.parameters = metadata;
+                    }
+                } else {
+                    // Si no es un JSON, guardar como parámetros
+                    metadataObj.parameters = metadata;
+                }
+                
+                // Añadir los metadatos al formulario
+                formData.append('metadata', JSON.stringify(metadataObj));
                 formData.append('image', fileInput.files[0]);
                 
                 // Enviar la solicitud para guardar los metadatos

@@ -53,13 +53,35 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                         self.send_error(400, f"Error al procesar los metadatos: {str(e)}")
                         return
 
-                    # Obtener los metadatos originales y actualizarlos
-                    original_metadata = img.info.copy()
-                    original_metadata.update(metadata_dict)
+                    # Crear una copia de la imagen
+                    img_copy = img.copy()
                     
-                    # Guardar la imagen con los metadatos actualizados
+                    # Procesar los metadatos del formulario
+                    if metadata.strip():
+                        try:
+                            # Intentar cargar como JSON
+                            if metadata.strip().startswith('{') and metadata.strip().endswith('}'):
+                                import json
+                                try:
+                                    metadata_dict = json.loads(metadata)
+                                    if isinstance(metadata_dict, dict):
+                                        # Actualizar los metadatos
+                                        for k, v in metadata_dict.items():
+                                            if v is not None:
+                                                img_copy.info[k] = str(v) if not isinstance(v, (str, bytes)) else v
+                                except json.JSONDecodeError:
+                                    # Si no es un JSON válido, guardar como parámetro
+                                    img_copy.info['parameters'] = metadata
+                            else:
+                                # Si no es un JSON, guardar como parámetro
+                                img_copy.info['parameters'] = metadata
+                        except Exception as e:
+                            print(f"Error procesando metadatos: {str(e)}")
+                            img_copy.info['parameters'] = metadata
+                    
+                    # Guardar la imagen con los metadatos
                     output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp_image_with_metadata.png')
-                    img.save(output_path, **original_metadata)
+                    img_copy.save(output_path, format='PNG')
                     
                     # Enviar la imagen de vuelta al cliente
                     self.send_response(200)
