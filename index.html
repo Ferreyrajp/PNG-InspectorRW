@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inspector de PNG</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="styles.css">
-    </style>
 </head>
 <body>
-    <div class="container">
+    <div class="header-container">
+        <img src="PNG_Inspector.png" alt="PNG Inspector Logo" class="logo">
         <h1>PNG Inspector</h1>
     </div>
     <div class="container">
@@ -47,19 +48,21 @@
                 // Obtener los datos necesarios
                 const metadata = metadataForm.value;
                 const imageElement = document.querySelector('img');
-                const imageSrc = imageElement.src;
+                
+                if (!imageElement || !imageElement.src) {
+                    throw new Error('No hay imagen para guardar');
+                }
+
+                // Obtener la imagen original que se cargó inicialmente
+                const fileInput = document.getElementById('imageInput');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    throw new Error('No se encontró el archivo de imagen original');
+                }
 
                 // Crear un formulario para enviar los datos
                 const formData = new FormData();
                 formData.append('metadata', metadata);
-
-                // Obtener la imagen como blob
-                const imageBlob = await fetch(imageElement.src)
-                    .then(response => response.blob());
-                
-                // Crear un archivo de la imagen
-                const imageFile = new File([imageBlob], 'temp_image.png', { type: 'image/png' });
-                formData.append('image', imageFile);
+                formData.append('image', fileInput.files[0]);
                 
                 // Enviar la solicitud para guardar los metadatos
                 const response = await fetch('/', {
