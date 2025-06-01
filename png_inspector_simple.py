@@ -3,6 +3,7 @@ import socketserver
 import os
 import json
 from PIL import Image
+from PIL.PngImagePlugin import PngInfo
 import cgi
 
 class MyHandler(http.server.SimpleHTTPRequestHandler):
@@ -39,54 +40,34 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                     # Abrir la imagen original
                     img = Image.open(image_path)
                     
-                    # Crear un diccionario de metadatos
-                    metadata_dict = {}
-                    try:
-                        for line in metadata.split('\n'):
-                            if ':' in line:
-                                key, value = line.split(':', 1)
-                                key = key.strip()
-                                value = value.strip()
-                                if key and value:  # Solo agregar si ambos no están vacíos
-                                    metadata_dict[key] = value
-                    except Exception as e:
-                        self.send_error(400, f"Error al procesar los metadatos: {str(e)}")
-                        return
-
-                    # Crear una copia de la imagen
-                    img_copy = img.copy()
-                    
-                    # Procesar los metadatos del formulario
-                    if metadata and isinstance(metadata, str) and metadata.strip():
-                        metadata = metadata.strip()
-                        try:
-                            # Intentar cargar como JSON
-                            if metadata.startswith('{') and metadata.endswith('}'):
-                                try:
-                                    metadata_dict = json.loads(metadata)
-                                    if isinstance(metadata_dict, dict):
-                                        # Actualizar los metadatos
-                                        for k, v in metadata_dict.items():
-                                            if v is not None:
-                                                # Convertir a string si no es str o bytes
-                                                img_copy.info[str(k)] = str(v) if not isinstance(v, (str, bytes)) else v
-                                    else:
-                                        # Si no es un diccionario, guardar como parámetro
-                                        img_copy.info['parameters'] = metadata
-                                except json.JSONDecodeError as je:
-                                    # Si no es un JSON válido, guardar como parámetro
-                                    print(f"Error decodificando JSON: {str(je)}")
-                                    img_copy.info['parameters'] = metadata
-                            else:
-                                # Si no es un JSON, guardar como parámetro
-                                img_copy.info['parameters'] = metadata
-                        except Exception as e:
-                            print(f"Error procesando metadatos: {str(e)}")
-                            img_copy.info['parameters'] = metadata
-                    
-                    # Guardar la imagen con los metadatos
+                    # Crear el nombre del archivo de salida
                     output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp_image_with_metadata.png')
-                    img_copy.save(output_path, format='PNG')
+                    
+                    # Guardar la imagen con los metadatos exactamente como vienen
+                    print(f"Metadatos originales: {metadata}")
+                    
+                    # Limpiar los metadatos si vienen en formato {"parameters": ...}
+                    if metadata and isinstance(metadata, str) and metadata.strip():
+                        if metadata.strip().startswith('{"parameters":'):
+                            try:
+                                # Extraer solo el contenido después de "parameters":
+                                metadata = metadata.split('"parameters":', 1)[1].strip()
+                                # Eliminar llaves al inicio/final si existen
+                                metadata = metadata.strip('{}').strip()
+                                # Eliminar comillas al inicio/final si existen
+                                if (metadata.startswith('"') and metadata.endswith('"')) or \
+                                   (metadata.startswith("'") and metadata.endswith("'")):
+                                    metadata = metadata[1:-1]
+                                print(f"Metadatos limpios: {metadata}")
+                            except Exception as e:
+                                print(f"Error limpiando metadatos: {e}")
+                    
+                    pnginfo = PngInfo()
+                    pnginfo.add_text("Modificados", metadata)
+                    if metadata and isinstance(metadata, str) and metadata.strip():
+                        img.save(output_path, format='PNG', pnginfo=pnginfo)
+                    else:
+                        img.save(output_path, format='PNG')
                     
                     # Enviar la imagen de vuelta al cliente
                     self.send_response(200)
@@ -120,29 +101,14 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
 
                 try:
                     img = Image.open(image_path)
-                    metadatos = img.info
-                    metadatos_texto = ""
-                    for clave, valor in metadatos.items():
-                        try:
-                            if isinstance(valor, bytes):
-                                valor = valor.decode('utf-8')
-                            metadatos_texto += f"{clave}: {valor}\n"
-                        except:
-                            metadatos_texto += f"{clave}: (valor no decodificable)\n"
-
-                    metadatos_texto += "\nInformación Técnica:\n"
-                    metadatos_texto += f"Dimensiones: {img.width}x{img.height}\n"
-                    metadatos_texto += f"Modo de Color: {img.mode}\n"
-                    metadatos_texto += f"Formato: {img.format}\n"
-                    metadatos_texto += f"Tamaño: {img.size[0]}x{img.size[1]}\n"
-
-                    metadata = {
-                        "metadatos": metadatos_texto,
-                        "image_path": image_path,
-                        "metadatos_crudos": str(img.info)
-                    }
+                    
+                    # Crear la respuesta con el formato que el frontend espera
                     response_data = {
-                        "metadata": metadata
+                        "metadata": {
+                            "metadatos": str(img.info),
+                            "metadatos_crudos": str(img.info),
+                            "image_path": image_path
+                        }
                     }
 
                 except Exception as e:
@@ -171,8 +137,14 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
             return
 
 if __name__ == '__main__':
+    import webbrowser
     PORT = 8081
+    url = f"http://localhost:{PORT}"
     Handler = MyHandler
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
         print(f"Servidor iniciado en el puerto {PORT}")
+        print(f"Abre tu navegador en: {url}")
+        print("O haz clic aquí: ", end='')
+        print(f"\033]8;;{url}\033\\{url}\033]8;;\033\\")
+        webbrowser.open(url)
         httpd.serve_forever()

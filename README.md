@@ -8,13 +8,20 @@ PNG Inspector RW es una herramienta web para visualizar y editar metadatos de im
 ## Características
 
 - Visualización de metadatos de imágenes PNG
-- Edición de metadatos existentes
-- Soporte para parámetros de generación de IA (Stable Diffusion, etc.)
+- Edición de metadatos existentes con preservación exacta del formato
 - Interfaz web intuitiva y fácil de usar
 - Compatible con cualquier navegador moderno
 - Preserva la calidad original de la imagen al guardar
 - Soporte para arrastrar y soltar imágenes
 - Visualización previa de la imagen cargada
+- Limpieza automática de formato JSON en los metadatos
+
+## 🚀 Estado Actual
+
+- ✅ Funcionalidad básica de visualización de metadatos
+- ✅ Edición y guardado de metadatos
+- ✅ Limpieza automática de formato JSON en metadatos
+- ✅ Interfaz de usuario mejorada
 
 ## Vista Previa
 
