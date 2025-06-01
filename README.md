@@ -91,15 +91,13 @@ La aplicación soporta dos formatos de metadatos:
 2. **JSON**: Para una estructura más organizada, usa formato JSON:
    ```json
    {
-     "parameters": "Tus parámetros aquí",
-     "author": "Tu nombre",
-     "description": "Descripción de la imagen"
+     "parameters": "Tus parámetros aquí"
    }
    ```
 
 ## Solución de Problemas
 
-### No se guardan los metadatos
+### Se guardan los metadatos pero....
 - Asegúrate de que la imagen no esté abierta en otro programa
 - Verifica que tengas permisos de escritura en el directorio de descargas
 - Si usas un formato JSON, verifica que sea válido
