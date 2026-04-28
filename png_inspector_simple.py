@@ -4,7 +4,7 @@ import os
 import json
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
-import cgi
+import multipart
 
 class MyHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -15,16 +15,45 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         try:
             # Leer los datos del formulario
-            form = cgi.FieldStorage(
-                fp=self.rfile,
-                headers=self.headers,
-                environ={'REQUEST_METHOD': 'POST'}
-            )
+            content_type = self.headers.get('Content-Type', '')
+            content_length = int(self.headers.get('Content-Length', 0))
+            
+            # Leer todo el contenido del POST
+            post_data = self.rfile.read(content_length)
+            
+            # Parsear el formulario multipart usando MultipartParser
+            from multipart import parse_options_header
+            from multipart import MultipartParser
+            
+            # Extraer el boundary del content-type
+            _, params = parse_options_header(content_type)
+            boundary = params.get('boundary', '')
+            
+            # Convertir los datos a un objeto similar a archivo
+            from io import BytesIO
+            post_stream = BytesIO(post_data)
+            
+            # Parsear el formulario
+            form_data = MultipartParser(post_stream, boundary)
+            
+            # Convertir a un formato similar a FieldStorage
+            form = {}
+            for part in form_data:
+                if part.filename:
+                    # Es un archivo
+                    form[part.name] = type('FileField', (), {
+                        'file': part.file,
+                        'filename': part.filename,
+                        'name': part.name
+                    })()
+                else:
+                    # Es un campo de texto
+                    form[part.name] = part.value.decode('utf-8')
 
             # Verificar si es una solicitud de guardar metadatos
             if 'metadata' in form and 'image' in form:
                 # Obtener los metadatos del formulario
-                metadata = form.getvalue('metadata')
+                metadata = form['metadata']
                 image_item = form['image']
                 
                 if not metadata or not hasattr(image_item, 'file') or not image_item.file:
