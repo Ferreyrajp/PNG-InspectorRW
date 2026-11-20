@@ -12,204 +12,172 @@
         <img src="PNG_Inspector.png" alt="PNG Inspector Logo" class="logo">
         <h1>PNG Inspector</h1>
     </div>
-    <div class="container">
-        <div class="column">
-            <div class="image-container">
+    <main class="container">
+        <section class="column">
+            <div class="image-container" id="imageContainer">
                 <label class="upload-message" for="imageInput">Arrastra o selecciona una imagen PNG</label>
-                <img id="preview" src="" alt="Preview">
-                <div class="close-button" id="closeButton"></div>
-                <input type="file" id="imageInput" accept="image/png" style="display: none;">
+                <img id="preview" alt="Vista previa" hidden>
+                <button class="close-button" id="closeButton" type="button" aria-label="Cerrar imagen">×</button>
+                <input type="file" id="imageInput" accept="image/png" hidden>
             </div>
-        </div>
-        <div class="column">
+        </section>
+        <section class="column">
             <div class="metadata-section">
-                <label for="metadata">Metadatos:</label>
-                <textarea id="metadata"></textarea>
-                <button id="saveButton" class="save-button" style="display: none;">Guardar</button>
+                <h2>Metadatos</h2>
+                <p id="metadataStatus">Cargá una imagen para inspeccionar sus metadatos.</p>
+                <div id="metadataGroups"></div>
+                <div class="metadata-actions">
+                    <button id="saveButton" disabled>Guardar cambios</button>
+                    <button id="removeAllButton" class="delete-button" disabled>Eliminar todos los metadatos</button>
+                </div>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
+<script>
+const imageInput = document.getElementById('imageInput');
+const preview = document.getElementById('preview');
+const saveButton = document.getElementById('saveButton');
+const removeAllButton = document.getElementById('removeAllButton');
+const metadataGroups = document.getElementById('metadataGroups');
+const metadataStatus = document.getElementById('metadataStatus');
+const imageContainer = document.getElementById('imageContainer');
+let metadata = {};
+let currentFile = null;
 
-    <script>
-        const imageInput = document.getElementById('imageInput');
-        const preview = document.getElementById('preview');
-        const metadataForm = document.getElementById('metadata');
-        const saveButton = document.getElementById('saveButton');
-        const closeButton = document.getElementById('closeButton');
+function categoryFor(key, value) {
+    const text = String(value || '');
+    const lowerKey = key.toLowerCase();
+    if (lowerKey === 'workflow' || (lowerKey === 'prompt' && /"(nodes|links|last_node_id)"\s*:/.test(text))) return 'ComfyUI';
+    if (lowerKey === 'parameters' || lowerKey === 'prompt') return 'Forge / Stable Diffusion';
+    return 'Otros metadatos';
+}
 
-        // Mostrar el botón de guardar cuando se edita el textarea
-        metadataForm.addEventListener('input', () => {
-            saveButton.style.display = 'block';
+function renderMetadata() {
+    metadataGroups.replaceChildren();
+    const groups = new Map();
+    Object.entries(metadata).forEach(([key, value]) => {
+        const title = categoryFor(key, value);
+        if (!groups.has(title)) groups.set(title, []);
+        groups.get(title).push([key, value]);
+    });
+    if (!Object.keys(metadata).length) {
+        metadataStatus.textContent = 'La imagen no contiene metadatos de texto.';
+        return;
+    }
+    metadataStatus.textContent = 'Editá los campos que quieras conservar o eliminar.';
+    groups.forEach((entries, title) => {
+        const section = document.createElement('section');
+        section.className = 'metadata-group';
+        const heading = document.createElement('h3');
+        heading.textContent = title;
+        section.append(heading);
+        entries.forEach(([key, value]) => {
+            const field = document.createElement('div');
+            field.className = 'metadata-field';
+            const label = document.createElement('label');
+            label.textContent = key;
+            const textarea = document.createElement('textarea');
+            textarea.value = value;
+            textarea.setAttribute('aria-label', `Metadato ${key}`);
+            textarea.addEventListener('input', () => {
+                metadata[key] = textarea.value;
+                saveButton.disabled = false;
+            });
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'field-delete';
+            remove.textContent = 'Eliminar campo';
+            remove.addEventListener('click', () => {
+                delete metadata[key];
+                renderMetadata();
+                saveButton.disabled = false;
+            });
+            field.append(label, textarea, remove);
+            section.append(field);
         });
+        metadataGroups.append(section);
+    });
+}
 
-        // Manejar el clic en el botón de guardar
-        saveButton.addEventListener('click', async () => {
-            try {
-                // Obtener los datos necesarios
-                const metadata = metadataForm.value;
-                const imageElement = document.querySelector('img');
-                
-                if (!imageElement || !imageElement.src) {
-                    throw new Error('No hay imagen para guardar');
-                }
-
-                // Obtener la imagen original que se cargó inicialmente
-                const fileInput = document.getElementById('imageInput');
-                if (!fileInput.files || fileInput.files.length === 0) {
-                    throw new Error('No se encontró el archivo de imagen original');
-                }
-
-                // Crear un formulario para enviar los datos
-                const formData = new FormData();
-                
-                // Crear un objeto con los metadatos
-                const metadataObj = {};
-                
-                // Si el texto parece ser un JSON, intentar parsearlo
-                if (metadata.trim().startsWith('{') && metadata.trim().endsWith('}')) {
-                    try {
-                        const parsed = JSON.parse(metadata);
-                        if (typeof parsed === 'object' && parsed !== null) {
-                            Object.assign(metadataObj, parsed);
-                        } else {
-                            metadataObj.parameters = metadata;
-                        }
-                    } catch (e) {
-                        metadataObj.parameters = metadata;
-                    }
-                } else {
-                    // Si no es un JSON, guardar como parámetros
-                    metadataObj.parameters = metadata;
-                }
-                
-                // Añadir los metadatos al formulario
-                formData.append('metadata', JSON.stringify(metadataObj));
-                formData.append('image', fileInput.files[0]);
-                
-                // Enviar la solicitud para guardar los metadatos
-                const response = await fetch('/', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (response.ok) {
-                    // Crear un enlace para descargar la imagen
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'image_with_metadata.png';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-
-                    // Mostrar mensaje de éxito
-                    alert('¡Metadatos guardados exitosamente! La imagen se ha descargado.');
-                } else {
-                    const errorText = await response.text();
-                    throw new Error(errorText || 'Error al guardar los metadatos');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error al guardar los metadatos: ' + error.message);
-            }
-        });
-
-        // Función para limpiar la imagen y los metadatos
-        function clearImage() {
-            preview.src = '';
-            preview.removeAttribute('src');
-            preview.style.display = 'none';
-            metadataForm.value = '';
-            modifiedMetadataForm.value = '';
-            imageInput.value = '';
+async function saveImage(removeAll = false) {
+    if (!currentFile) return;
+    try {
+        const formData = new FormData();
+        formData.append('action', 'save');
+        formData.append('metadata', JSON.stringify(metadata));
+        formData.append('remove_all', String(removeAll));
+        formData.append('image', currentFile);
+        const response = await fetch('/', { method: 'POST', body: formData });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Error al guardar los metadatos');
         }
+        const url = URL.createObjectURL(await response.blob());
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'png_metadata_updated.png';
+        link.click();
+        URL.revokeObjectURL(url);
+        alert(removeAll ? 'Se descargó la imagen sin metadatos.' : 'Se descargó la imagen con los cambios.');
+    } catch (error) {
+        alert('No se pudo guardar: ' + error.message);
+    }
+}
 
-        // Evento para el botón de cierre
-        closeButton.addEventListener('click', clearImage);
+saveButton.addEventListener('click', () => saveImage());
+removeAllButton.addEventListener('click', () => {
+    if (confirm('¿Eliminar todos los metadatos de la imagen?')) saveImage(true);
+});
+document.getElementById('closeButton').addEventListener('click', () => {
+    preview.removeAttribute('src');
+    preview.hidden = true;
+    currentFile = null;
+    metadata = {};
+    metadataGroups.replaceChildren();
+    metadataStatus.textContent = 'Cargá una imagen para inspeccionar sus metadatos.';
+    saveButton.disabled = true;
+    removeAllButton.disabled = true;
+    imageInput.value = '';
+});
 
-        // Manejo de arrastrar y soltar
-        const imageContainer = document.querySelector('.image-container');
-        
-        imageContainer.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            imageContainer.classList.add('dragover');
-        });
-
-        imageContainer.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            imageContainer.classList.remove('dragover');
-        });
-
-        imageContainer.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            imageContainer.classList.remove('dragover');
-            
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                imageInput.files = e.dataTransfer.files;
-                imageInput.dispatchEvent(new Event('change'));
-            }
-        });
-
-        imageInput.addEventListener('change', async (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            // Mostrar la imagen y preparar la carga
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                preview.src = e.target.result;
-                preview.style.display = 'block';
-                preview.style.visibility = 'visible';
-                // Mostrar el botón de guardar cuando hay una imagen
-                saveButton.style.display = 'block';
-                // Limpiar el textarea antes de cargar la nueva imagen
-                metadataForm.value = '';
-            };
-            reader.readAsDataURL(file);
-
-            // Enviar la imagen al servidor
-            const formData = new FormData();
-            formData.append('image', file);
-
-            try {
-                const response = await fetch('/', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    const metadataText = data.metadata.metadatos_crudos;
-
-                    
-                    // Reemplazar comillas simples por dobles
-                    const jsonString = metadataText.replace(/'/g, '"');
-                    try {
-                        // Parsear el JSON
-                        const jsonData = JSON.parse(jsonString);
-                        
-                        // Extraer y dividir
-                        const parameters = jsonData["parameters"];
-                        const partes = parameters.split("\n\n", 1);
-                        
-                        const titulo = partes[0].trim();
-                        const datos = partes[1]?.trim() || "";
-                        
-                        metadataForm.value += '\n' + titulo + ':\n' + datos;
-                    } catch (e) {
-                        // Si hay algún error, mostrar el texto original
-                        metadataForm.value += '\n' + metadataText;
-                    }
-                } else {
-                    console.error('Error al procesar la imagen');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        });
-    </script>
+imageContainer.addEventListener('dragover', event => {
+    event.preventDefault();
+    imageContainer.classList.add('dragover');
+});
+imageContainer.addEventListener('dragleave', () => imageContainer.classList.remove('dragover'));
+imageContainer.addEventListener('drop', event => {
+    event.preventDefault();
+    imageContainer.classList.remove('dragover');
+    const file = event.dataTransfer.files[0];
+    if (file && file.type === 'image/png') {
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        imageInput.files = transfer.files;
+        imageInput.dispatchEvent(new Event('change'));
+    }
+});
+imageInput.addEventListener('change', async event => {
+    const file = event.target.files[0];
+    if (!file) return;
+    currentFile = file;
+    preview.src = URL.createObjectURL(file);
+    preview.hidden = false;
+    saveButton.disabled = true;
+    removeAllButton.disabled = false;
+    metadataStatus.textContent = 'Leyendo metadatos…';
+    const formData = new FormData();
+    formData.append('action', 'inspect');
+    formData.append('image', file);
+    try {
+        const response = await fetch('/', { method: 'POST', body: formData });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'No se pudo leer la imagen');
+        metadata = data.metadata || {};
+        renderMetadata();
+    } catch (error) {
+        metadataStatus.textContent = error.message;
+    }
+});
+</script>
 </body>
 </html>

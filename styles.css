@@ -94,6 +94,8 @@ h1 {
     opacity: 1;
 }
 
+.image-container img[hidden] { display: none; }
+
 .image-container img[src=''] {
     display: none;
 }
@@ -129,6 +131,9 @@ h1 {
     opacity: 1;
     pointer-events: auto;
 }
+
+.image-container:has(img:not([hidden])) .close-button { opacity: 1; pointer-events: auto; }
+.image-container:has(img:not([hidden])) .upload-message { opacity: 0; }
 
 .close-button:hover {
     background-color: var(--text-color);
@@ -201,7 +206,8 @@ input[type="file"] {
 }
 
 textarea {
-    width: 95%;
+    width: 100%;
+    box-sizing: border-box;
     padding: 10px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -209,8 +215,8 @@ textarea {
     color: var(--text-color);
     font-family: monospace;
     resize: vertical;
-    min-height: 470px;
-    height: 470px;
+    min-height: 120px;
+    height: 180px;
     font-size: 15px;
 }
 
@@ -233,9 +239,23 @@ button:hover {
     margin-bottom: 20px;
 }
 
+.metadata-section h2 { margin-top: 0; }
+.metadata-section > p { color: #ccc; }
+.metadata-group { border-top: 1px solid var(--border-color); padding: 12px 0; }
+.metadata-group h3 { margin: 0 0 12px; color: #8fc1ff; }
+.metadata-field { margin-bottom: 18px; }
+.metadata-field label { font-size: 15px; font-weight: bold; }
+.metadata-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.metadata-actions button { margin-top: 10px; }
+.delete-button, .field-delete { background-color: #b33a3a; }
+.delete-button:hover, .field-delete:hover { background-color: #912d2d; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+
 label {
     display: block;
     margin-bottom: 10px;
     color: var(--text-color);
     font-size: 23px;
 }
+
+.upload-message { font-size: 14px; }

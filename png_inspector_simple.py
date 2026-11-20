@@ -1,179 +1,97 @@
 import http.server
-import socketserver
-import os
+import io
 import json
+import socketserver
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 import multipart
+
 
 class MyHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/':
             self.path = '/index.html'
-        return http.server.SimpleHTTPRequestHandler.do_GET(self)
+        return super().do_GET()
+
+    def _read_form(self):
+        from multipart import parse_options_header, MultipartParser
+
+        content_type = self.headers.get('Content-Type', '')
+        length = int(self.headers.get('Content-Length', 0))
+        _, params = parse_options_header(content_type)
+        parser = MultipartParser(io.BytesIO(self.rfile.read(length)), params.get('boundary', ''))
+        fields = {}
+        for part in parser:
+            if part.filename:
+                fields[part.name] = part.file.read()
+            else:
+                value = part.value
+                fields[part.name] = value.decode('utf-8') if isinstance(value, bytes) else str(value)
+        return fields
+
+    def _json(self, status, payload):
+        data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
     def do_POST(self):
         try:
-            # Leer los datos del formulario
-            content_type = self.headers.get('Content-Type', '')
-            content_length = int(self.headers.get('Content-Length', 0))
-            
-            # Leer todo el contenido del POST
-            post_data = self.rfile.read(content_length)
-            
-            # Parsear el formulario multipart usando MultipartParser
-            from multipart import parse_options_header
-            from multipart import MultipartParser
-            
-            # Extraer el boundary del content-type
-            _, params = parse_options_header(content_type)
-            boundary = params.get('boundary', '')
-            
-            # Convertir los datos a un objeto similar a archivo
-            from io import BytesIO
-            post_stream = BytesIO(post_data)
-            
-            # Parsear el formulario
-            form_data = MultipartParser(post_stream, boundary)
-            
-            # Convertir a un formato similar a FieldStorage
-            form = {}
-            for part in form_data:
-                if part.filename:
-                    # Es un archivo
-                    form[part.name] = type('FileField', (), {
-                        'file': part.file,
-                        'filename': part.filename,
-                        'name': part.name
-                    })()
-                else:
-                    # Es un campo de texto
-                    form[part.name] = part.value.decode('utf-8')
-
-            # Verificar si es una solicitud de guardar metadatos
-            if 'metadata' in form and 'image' in form:
-                # Obtener los metadatos del formulario
-                metadata = form['metadata']
-                image_item = form['image']
-                
-                if not metadata or not hasattr(image_item, 'file') or not image_item.file:
-                    self.send_error(400, "Datos incompletos en la solicitud")
-                    return
-
-                try:
-                    # Guardar la imagen temporalmente
-                    image_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp_image.png')
-                    with open(image_path, 'wb') as f:
-                        f.write(image_item.file.read())
-                    
-                    # Abrir la imagen original
-                    img = Image.open(image_path)
-                    
-                    # Crear el nombre del archivo de salida
-                    output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp_image_with_metadata.png')
-                    
-                    # Guardar la imagen con los metadatos exactamente como vienen
-                    print(f"Metadatos originales: {metadata}")
-                    
-                    # Limpiar los metadatos si vienen en formato {"parameters": ...}
-                    if metadata and isinstance(metadata, str) and metadata.strip():
-                        if metadata.strip().startswith('{"parameters":'):
-                            try:
-                                # Extraer solo el contenido después de "parameters":
-                                metadata = metadata.split('"parameters":', 1)[1].strip()
-                                # Eliminar llaves al inicio/final si existen
-                                metadata = metadata.strip('{}').strip()
-                                # Eliminar comillas al inicio/final si existen
-                                if (metadata.startswith('"') and metadata.endswith('"')) or \
-                                   (metadata.startswith("'") and metadata.endswith("'")):
-                                    metadata = metadata[1:-1]
-                                print(f"Metadatos limpios: {metadata}")
-                            except Exception as e:
-                                print(f"Error limpiando metadatos: {e}")
-                    
-                    pnginfo = PngInfo()
-                    pnginfo.add_text("Modificados", metadata)
-                    if metadata and isinstance(metadata, str) and metadata.strip():
-                        img.save(output_path, format='PNG', pnginfo=pnginfo)
-                    else:
-                        img.save(output_path, format='PNG')
-                    
-                    # Enviar la imagen de vuelta al cliente
-                    self.send_response(200)
-                    self.send_header('Content-type', 'application/octet-stream')
-                    self.send_header('Content-Disposition', 'attachment; filename="image_with_metadata.png"')
-                    self.end_headers()
-                    
-                    # Leer y enviar la imagen
-                    with open(output_path, 'rb') as f:
-                        self.wfile.write(f.read())
-                    
-                    # Limpiar archivos temporales
-                    os.remove(output_path)
-                    os.remove(image_path)
-                    return
-                    
-                except Exception as e:
-                    self.send_error(500, f"Error al procesar la imagen: {str(e)}")
-                    return
-
-            # Si no es guardar metadatos, asumimos que es cargar imagen
-            elif "image" in form:
-                image_item = form['image']
-                if not image_item.file:
-                    self.send_error(400, "Archivo no válido")
-                    return
-
-                image_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp_image.png')
-                with open(image_path, 'wb') as f:
-                    f.write(image_item.file.read())
-
-                try:
-                    img = Image.open(image_path)
-                    
-                    # Crear la respuesta con el formato que el frontend espera
-                    response_data = {
-                        "metadata": {
-                            "metadatos": str(img.info),
-                            "metadatos_crudos": str(img.info),
-                            "image_path": image_path
-                        }
-                    }
-
-                except Exception as e:
-                    metadata = {
-                        "metadatos": f"Error procesando imagen: {str(e)}",
-                        "image_path": "",
-                        "metadatos_crudos": str(e)
-                    }
-                    response_data = {
-                        "metadata": metadata
-                    }
-
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-
-                self.wfile.write(json.dumps(response_data, ensure_ascii=False).encode('utf-8'))
+            form = self._read_form()
+            if 'image' not in form:
+                self._json(400, {'error': 'No se recibió una imagen.'})
                 return
 
-            else:
-                self.send_error(400, "Solicitud no válida")
+            image_data = form['image']
+            with Image.open(io.BytesIO(image_data)) as source:
+                image = source.copy()
+                if form.get('action', 'inspect') == 'inspect':
+                    metadata = {key: value for key, value in source.info.items()
+                                if isinstance(value, str)}
+                    self._json(200, {'metadata': metadata})
+                    return
+
+            if form.get('action') != 'save':
+                self._json(400, {'error': 'Acción no válida.'})
                 return
 
-        except Exception as e:
-            self.send_error(500, f"Error interno del servidor: {str(e)}")
-            return
+            remove_all = form.get('remove_all', 'false').lower() == 'true'
+            metadata = json.loads(form.get('metadata', '{}'))
+            if not isinstance(metadata, dict):
+                self._json(400, {'error': 'Los metadatos deben ser un objeto JSON.'})
+                return
+
+            pnginfo = PngInfo()
+            if not remove_all:
+                for key, value in metadata.items():
+                    if isinstance(key, str) and isinstance(value, str):
+                        pnginfo.add_text(key, value)
+
+            output = io.BytesIO()
+            options = {'format': 'PNG'}
+            if not remove_all and metadata:
+                options['pnginfo'] = pnginfo
+            image.save(output, **options)
+            data = output.getvalue()
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/png')
+            self.send_header('Content-Disposition', 'attachment; filename="png_metadata_updated.png"')
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except (ValueError, json.JSONDecodeError) as error:
+            self._json(400, {'error': f'Datos no válidos: {error}'})
+        except Exception as error:
+            self._json(500, {'error': f'Error al procesar la imagen: {error}'})
+
 
 if __name__ == '__main__':
     import webbrowser
     PORT = 8081
-    url = f"http://localhost:{PORT}"
-    Handler = MyHandler
-    with socketserver.TCPServer(("", PORT), Handler) as httpd:
-        print(f"Servidor iniciado en el puerto {PORT}")
-        print(f"Abre tu navegador en: {url}")
-        print("O haz clic aquí: ", end='')
-        print(f"\033]8;;{url}\033\\{url}\033]8;;\033\\")
+    url = f'http://localhost:{PORT}'
+    with socketserver.TCPServer(('', PORT), MyHandler) as httpd:
+        print(f'Servidor iniciado en {url}')
         webbrowser.open(url)
         httpd.serve_forever()
